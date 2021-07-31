@@ -1,4 +1,4 @@
-const axios = require('axios')
+const axios = require('axios');
 
 exports.send = (req, res) => {
     console.log('>>>>> TextController send');
@@ -11,7 +11,7 @@ exports.send = (req, res) => {
     const text = req.body;
     console.log(text);
     const validationResult = validateText(text);
-    if (validationResult != 'VALID') {
+    if (validationResult !== 'VALID') {
         return res.status(400).send({
             message: validationResult
         });
@@ -67,11 +67,24 @@ function isValidURL(text) {
 
 
 function sendText(text, res) {
-    axios.post('https://jo3kcwlvke.execute-api.us-west-2.amazonaws.com', text)
+    axios.post('https://jo3kcwlvke.execute-api.us-west-2.amazonaws.com/dev/provider1', text)
         .then((textReq) => {
+            console.log('>>>>> axios post then');
             console.log(textReq);
+            if (textReq.status !== 200) {
+                return res.status(500).send({
+                    message: textReq.data
+                });
+            } else {
+                return res.status(200).send({
+                    message_id: textReq.data.message_id
+                });
+            }
         })
         .catch((error) => {
             console.log(error);
+            return res.status(500).send({
+                message: error
+            });
         });
 }

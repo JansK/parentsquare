@@ -13,6 +13,7 @@ app.use(cors());
 app.use(morgan('combined'));
 
 require('./routes/text.routes.js')(app);
+require('./routes/delivery.routes.js')(app);
 
 app.all('/', (req, res) => {
   res.send("Yes, your local server is running");
