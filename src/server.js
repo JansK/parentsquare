@@ -3,8 +3,11 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const {
+  createMongoMemoryServer
+} = require('./database/mongo');
+const mongoose = require('mongoose');
 
-// defining the Express app
 const app = express();
 
 app.use(helmet());
@@ -19,6 +22,23 @@ app.all('/', (req, res) => {
   res.send("Yes, your local server is running");
 });
 
-app.listen(3001, () => {
-  console.log('listening on port 3001');
+mongoose.Promise = global.Promise;
+createMongoMemoryServer().then((mongoServer) => {
+  const mongoUri = mongoServer.getUri();
+  mongoose.connect(mongoUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  }).then(() => {
+    console.log("Successfully connected to the database");
+  }).catch(err => {
+    console.log('Could not connect to the database. Exiting now...', err);
+    process.exit();
+  });
+  const db = mongoose.connection;
+
+  db.on('open', () => {
+    app.listen(3001, async () => {
+      console.log('listening on port 3001');
+    });
+  });
 });

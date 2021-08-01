@@ -1,10 +1,11 @@
 const axios = require('axios');
+const {saveText, getTexts, getText} = require('../database/TextsCollection');
 
-exports.send = (req, res) => {
+exports.send = (req, resp) => {
     console.log('>>>>> TextController send');
 
     if (!req.body) {
-        return res.status(400).send({
+        return resp.status(400).send({
             message: 'Body can not be empty'
         });
     }
@@ -12,12 +13,15 @@ exports.send = (req, res) => {
     console.log(text);
     const validationResult = validateText(text);
     if (validationResult !== 'VALID') {
-        return res.status(400).send({
+        return resp.status(400).send({
             message: validationResult
         });
     }
 
-    sendText(text, res);
+    const result = getText(text.to_number, resp);
+    console.log(result)
+
+    sendText(text, resp);
 
 };
 
@@ -66,24 +70,24 @@ function isValidURL(text) {
 
 
 
-function sendText(text, res) {
+function sendText(text, resp) {
     axios.post('https://jo3kcwlvke.execute-api.us-west-2.amazonaws.com/dev/provider1', text)
         .then((textReq) => {
             console.log('>>>>> axios post then');
-            console.log(textReq);
+            console.log(textReq.data);
             if (textReq.status !== 200) {
-                return res.status(500).send({
+                return resp.status(500).send({
                     message: textReq.data
                 });
             } else {
-                return res.status(200).send({
+                return resp.status(200).send({
                     message_id: textReq.data.message_id
                 });
             }
         })
         .catch((error) => {
             console.log(error);
-            return res.status(500).send({
+            return resp.status(500).send({
                 message: error
             });
         });
