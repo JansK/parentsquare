@@ -1,9 +1,10 @@
 const axios = require('axios');
-const {saveText, getTexts, getText} = require('../database/TextsCollection');
+const {saveText, getTextByPhoneNumber, updateTextById} = require('../database/TextsCollection');
 
-exports.send = (req, resp) => {
+exports.send = async (req, resp) => {
     console.log('>>>>> TextController send');
 
+    // Validate body
     if (!req.body) {
         return resp.status(400).send({
             message: 'Body can not be empty'
@@ -18,11 +19,36 @@ exports.send = (req, resp) => {
         });
     }
 
-    const result = getText(text.to_number, resp);
-    console.log(result)
-
-    sendText(text, resp);
-
+    // Check if number has been used in the past
+    const getResult = await getTextByPhoneNumber(text.to_number, resp)
+        // check if we've seen this number before but we don't know if it's valid or not
+        // i.e. the text service hasn't sent its callback yet
+    if (getResult && !getResult.status) {
+        return resp.status(400).send({
+            message: 'Status of phone number is unknown.'
+        });
+    }
+    if (getResult && getResult.status && getResult.status === 'invalid') {
+        return resp.status(400).send({
+            message: 'Phone number is invalid. You cannot send messages to this phone number.'
+        });
+    }
+    let sendResult;
+    if (!getResult) {
+        // we haven't seen this number before
+        const saveResult = await saveText(text, resp);
+        console.log('outside saveResult: ' + JSON.stringify(saveResult));
+        sendResult = await sendText(saveResult, resp);
+        const updateResult = await updateTextById(saveResult, sendResult, resp);
+    } else {
+        // we have seen this number before and it's still valid to send to
+        sendResult = await sendText(getResult, resp);
+        updateTextById(getResult, sendResult, resp);
+    }
+    console.log('outside all: ' + JSON.stringify(sendResult));
+    return resp.status(200).send({
+        message: 'Text message send with message_id: ' + sendResult
+    });
 };
 
 function validateText(text) {
@@ -68,27 +94,35 @@ function isValidURL(text) {
     }
 }
 
-
-
-function sendText(text, resp) {
-    axios.post('https://jo3kcwlvke.execute-api.us-west-2.amazonaws.com/dev/provider1', text)
-        .then((textReq) => {
-            console.log('>>>>> axios post then');
-            console.log(textReq.data);
-            if (textReq.status !== 200) {
+async function sendText(text, resp) {
+    console.log('>>>>> sendText');
+    let response = null;
+    try {
+        response = await axios.post('https://jo3kcwlvke.execute-api.us-west-2.amazonaws.com/dev/provider1', text)
+        .then((textResp) => {
+            console.log('inside axios.post.then');
+            console.log(textResp.status);
+            console.log(textResp.data);
+            if (!textResp) {
                 return resp.status(500).send({
-                    message: textReq.data
-                });
+					message: "No response from text service"
+				});
+            } else if (textResp.status !== 200) {
+                return resp.status(textResp.status).send({
+					message: "Text not found with id " + text._id
+				});
             } else {
-                return resp.status(200).send({
-                    message_id: textReq.data.message_id
-                });
+                return textResp.data.message_id;
             }
-        })
-        .catch((error) => {
-            console.log(error);
-            return resp.status(500).send({
-                message: error
-            });
         });
+    } catch (err) {
+        console.log('inside err');
+        console.error(err.message);
+        // console.error(err);
+    }
+    console.log('outside try/catch');
+    console.log(response);
+    // const data = await response;
+    // console.log(data);
+    return response;
 }

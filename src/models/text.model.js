@@ -4,7 +4,8 @@ const TextSchema = mongoose.Schema({
     to_number: String,
     message: String,
     callback_url: String,
-    status: String
+    status: String,
+    message_id: String
 }, {
     timestamps: true
 });
