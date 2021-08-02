@@ -1,5 +1,5 @@
 const axios = require('axios');
-const {saveText, getTextByPhoneNumber, updateTextById} = require('../database/TextsCollection');
+const {saveText, getLatestTextByPhoneNumber, updateTextMessageIdById} = require('../database/TextsCollection');
 
 exports.send = async (req, resp) => {
     console.log('>>>>> TextController send');
@@ -20,7 +20,7 @@ exports.send = async (req, resp) => {
     }
 
     // Check if number has been used in the past
-    const getResult = await getTextByPhoneNumber(text.to_number, resp)
+    const getResult = await getLatestTextByPhoneNumber(text.to_number, resp);
         // check if we've seen this number before but we don't know if it's valid or not
         // i.e. the text service hasn't sent its callback yet
     if (getResult && !getResult.status) {
@@ -29,26 +29,27 @@ exports.send = async (req, resp) => {
         });
     }
     if (getResult && getResult.status && getResult.status === 'invalid') {
+        console.log('inside invalid block')
         return resp.status(400).send({
             message: 'Phone number is invalid. You cannot send messages to this phone number.'
         });
     }
-    let sendResult;
-    if (!getResult) {
-        // we haven't seen this number before
-        const saveResult = await saveText(text, resp);
-        console.log('outside saveResult: ' + JSON.stringify(saveResult));
-        sendResult = await sendText(saveResult, resp);
-        const updateResult = await updateTextById(saveResult, sendResult, resp);
-    } else {
-        // we have seen this number before and it's still valid to send to
-        sendResult = await sendText(getResult, resp);
-        updateTextById(getResult, sendResult, resp);
+    const saveResult = await saveText(text, resp);
+    // console.log('outside saveResult: ' + JSON.stringify(saveResult));
+    console.log('outside saveResult: ', saveResult);
+    const sendResult = await sendText(saveResult, resp);
+    console.log('type of sendResult' + typeof sendResult);
+    console.log(typeof sendResult); // should be string
+    const updateResult = await updateTextMessageIdById(saveResult, sendResult, resp);
+    console.log('outside all: ', JSON.stringify(sendResult));
+    try {
+        return resp.status(200).send({
+            message: 'Text message send with message_id: ' + sendResult
+        });
+    } catch (err) {
+        console.log('caught err: ' + err.message);
     }
-    console.log('outside all: ' + JSON.stringify(sendResult));
-    return resp.status(200).send({
-        message: 'Text message send with message_id: ' + sendResult
-    });
+    
 };
 
 function validateText(text) {
@@ -101,8 +102,6 @@ async function sendText(text, resp) {
         response = await axios.post('https://jo3kcwlvke.execute-api.us-west-2.amazonaws.com/dev/provider1', text)
         .then((textResp) => {
             console.log('inside axios.post.then');
-            console.log(textResp.status);
-            console.log(textResp.data);
             if (!textResp) {
                 return resp.status(500).send({
 					message: "No response from text service"
@@ -119,10 +118,11 @@ async function sendText(text, resp) {
         console.log('inside err');
         console.error(err.message);
         // console.error(err);
+        return resp.status(500).send({
+            message: "Error from text service: " + err.message
+        });
     }
     console.log('outside try/catch');
     console.log(response);
-    // const data = await response;
-    // console.log(data);
     return response;
 }
