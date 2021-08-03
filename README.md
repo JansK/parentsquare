@@ -12,7 +12,7 @@ Please make sure you have the following installed:
 ### Running The Project
 1. To start the project, navigate to the root directory of the cloned repo .../parentsquare in command line
 2. Run the `npm start` command
-    a. This will spin up the server listening at port 3001
+    - This will spin up the server listening at port 3001
 2. To expose the API to the internet, in command line navigate to the directory where your `ngrock.exe` is located
 3. Run the `ngrok http 3001` command, and you should see an output like the one below:
 ```
@@ -21,7 +21,7 @@ ngrok by @inconshreveable                                (Ctrl+C to quit)
 Session Status                connecting
 Version                       2.3.40
 Region                        United States (us)
-ngrok by @inconshreveable                                                                      (Ctrl+C to quit)t)
+ngrok by @inconshreveable                                                                      
 Session Status                online
 Account                       Kevin Janssen (Plan: Free)
 Version                       2.3.40
@@ -33,7 +33,7 @@ Forwarding                    https://a5dfebd9004b.ngrok.io -> http://localhost:
 Connections                   ttl     opn     rt1     rt5     p50     p90    
 ```
 4. Using the example above, the server is now exposed to the internet at http://a5dfebd9004b.ngrok.io and https://a5dfebd9004b.ngrok.io addresses
-    a. For the purposes of this assignment please use the **http** address for sending requests
+    - For the purposes of this assignment please use the **http** address for sending requests
 5. You're now able to send requests to the server! :D
 
 ### Sending Requests
