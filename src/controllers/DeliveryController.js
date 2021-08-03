@@ -1,10 +1,9 @@
-const {getTextByMessageId, updateTextStatusByMessageId} = require('../database/TextsCollection');
+const { updateTextStatusByMessageId } = require('../database/TextsCollection');
 
 exports.handle = async (req, resp) => {
     console.log('>>>>> DeliveryController handle');
-    console.log(req.body)
+    console.log(req.body);
     
-    const getResult = await getTextByMessageId(req.body.message_id, resp);  
     const updateResult = await updateTextStatusByMessageId(req.body, resp);
     try {
         return resp.status(200).send({

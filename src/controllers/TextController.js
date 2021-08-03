@@ -1,5 +1,9 @@
 const axios = require('axios');
-const {saveText, getLatestTextByPhoneNumber, updateTextMessageIdById} = require('../database/TextsCollection');
+const {
+    saveText,
+    getLatestTextByPhoneNumber,
+    updateTextMessageIdById
+} = require('../database/TextsCollection');
 
 exports.send = async (req, resp) => {
     console.log('>>>>> TextController send');
@@ -11,7 +15,6 @@ exports.send = async (req, resp) => {
         });
     }
     const text = req.body;
-    console.log(text);
     const validationResult = validateText(text);
     if (validationResult !== 'VALID') {
         return resp.status(400).send({
@@ -19,37 +22,34 @@ exports.send = async (req, resp) => {
         });
     }
 
-    // Check if number has been used in the past
-    const getResult = await getLatestTextByPhoneNumber(text.to_number, resp);
-        // check if we've seen this number before but we don't know if it's valid or not
-        // i.e. the text service hasn't sent its callback yet
-    if (getResult && !getResult.status) {
-        return resp.status(400).send({
-            message: 'Status of phone number is unknown.'
-        });
+    // Check if number has been used in the past. 
+    // If it has been, need to check if status is invalid.
+    let lastText = null;
+    let getResult = await getLatestTextByPhoneNumber(text.to_number, resp);
+    if (Array.isArray(getResult) && getResult.length == 1) {
+        lastText = getResult[0];
+        console.log('last text: ', lastText);
     }
-    if (getResult && getResult.status && getResult.status === 'invalid') {
-        console.log('inside invalid block')
+    if (lastText && lastText.status && lastText.status === 'invalid') {
         return resp.status(400).send({
             message: 'Phone number is invalid. You cannot send messages to this phone number.'
         });
     }
+
     const saveResult = await saveText(text, resp);
-    // console.log('outside saveResult: ' + JSON.stringify(saveResult));
-    console.log('outside saveResult: ', saveResult);
     const sendResult = await sendText(saveResult, resp);
-    console.log('type of sendResult' + typeof sendResult);
-    console.log(typeof sendResult); // should be string
+    if (typeof sendResult === 'object') {
+        return sendResult;
+    }
     const updateResult = await updateTextMessageIdById(saveResult, sendResult, resp);
-    console.log('outside all: ', JSON.stringify(sendResult));
     try {
         return resp.status(200).send({
-            message: 'Text message send with message_id: ' + sendResult
+            message: 'Text message send with message_id: ' + updateResult.message_id
         });
     } catch (err) {
         console.log('caught err: ' + err.message);
     }
-    
+
 };
 
 function validateText(text) {
@@ -100,20 +100,21 @@ async function sendText(text, resp) {
     let response = null;
     try {
         response = await axios.post('https://jo3kcwlvke.execute-api.us-west-2.amazonaws.com/dev/provider1', text)
-        .then((textResp) => {
-            console.log('inside axios.post.then');
-            if (!textResp) {
-                return resp.status(500).send({
-					message: "No response from text service"
-				});
-            } else if (textResp.status !== 200) {
-                return resp.status(textResp.status).send({
-					message: "Text not found with id " + text._id
-				});
-            } else {
-                return textResp.data.message_id;
-            }
-        });
+            .then((textResp) => {
+                console.log('inside axios.post.then');
+                if (!textResp || !textResp.data) {
+                    return resp.status(500).send({
+                        message: "No response from text service"
+                    });
+                } else if (textResp.status !== 200) {
+                    return resp.status(textResp.status).send({
+                        message: "Text not found with id " + text._id
+                    });
+                } else {
+                    console.log('axios.post results: ' + textResp.data.message_id);
+                    return textResp.data.message_id;
+                }
+            });
     } catch (err) {
         console.log('inside err');
         console.error(err.message);
@@ -122,7 +123,5 @@ async function sendText(text, resp) {
             message: "Error from text service: " + err.message
         });
     }
-    console.log('outside try/catch');
-    console.log(response);
     return response;
 }
