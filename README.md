@@ -40,8 +40,9 @@ Connections                   ttl     opn     rt1     rt5     p50     p90
 
 ### Sending Requests
 1. To call the web service to send text messages, you can send a curl command like below:
-
-`curl -X POST -H "Content-Type: application/json" -d '{"to_number": "1234567890", "message": "This is my message", "callback_url": "http://a5dfebd9004b.ngrok.io/delivery"}' http://localhost:3001/texts`
+```
+curl -X POST -H "Content-Type: application/json" -d '{"to_number": "1234567890", "message": "This is my message", "callback_url": "http://a5dfebd9004b.ngrok.io/delivery"}' http://localhost:3001/texts
+```
 
 * Note how in the callback_url, we use the forwarding address provided by our `ngrok http 3001` command, http://a5dfebd9004b.ngrok.io, followed by the callback resource, /delivery. This will point the SMS provider to the correct endpoint to handle the callback.
 
